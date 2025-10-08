@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "sitim-test",
+    "name": "Ситим",
     "slug": "sitim-test",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.sitimtest"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.sitimtest"
     },
     "web": {
       "favicon": "./assets/favicon.png"
