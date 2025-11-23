@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Ситим",
-    "slug": "sitim-test",
+    "slug": "sitim-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,6 +27,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "420d045a-3f7e-475f-a3bf-8348c276c56a"
+      }
+    },
+    "owner": "jayesnerd"
   }
 }

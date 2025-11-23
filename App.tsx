@@ -1,7 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, StatusBar, StatusBarStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 const injectedJS = `
 (function() {
@@ -18,10 +21,8 @@ const injectedJS = `
     }
   }
 
-  // initial send
   send();
 
-  // wrap history methods for SPA routing
   const _push = history.pushState;
   history.pushState = function() {
     _push.apply(this, arguments);
@@ -36,14 +37,10 @@ const injectedJS = `
   window.addEventListener('popstate', send);
   window.addEventListener('hashchange', send);
 
-  // observe if meta[name="theme-color"] is added/changed
   const observer = new MutationObserver(function(muts) {
     for (const m of muts) {
-      if (m.type === 'attributes' && m.target && m.target.name === 'theme-color') {
-        send();
-      }
+      if (m.type === 'attributes' && m.target && m.target.name === 'theme-color') send();
       if (m.type === 'childList') {
-        // new meta might be added
         const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) send();
       }
@@ -53,7 +50,7 @@ const injectedJS = `
   const head = document.head || document.getElementsByTagName('head')[0];
   if (head) observer.observe(head, { childList: true, subtree: true, attributes: true });
 
-  true; // required for Android
+  true;
 })();
 `;
 
@@ -61,6 +58,7 @@ export default function App() {
   const [barStyle, setBarStyle] = useState<StatusBarStyle>('light-content');
   const [barColor, setBarColor] = useState('#222222');
   const webRef = useRef(null);
+  const insets = useSafeAreaInsets();
 
   const decideStyleByColor = (color: string) => {
     try {
@@ -68,6 +66,7 @@ export default function App() {
       let r = 0,
         g = 0,
         b = 0;
+
       if (color.startsWith('#')) {
         const c = color.slice(1);
         if (c.length === 3) {
@@ -80,13 +79,14 @@ export default function App() {
           b = parseInt(c.slice(4, 6), 16);
         }
       } else {
-        const nums = color.match(/\\d+/g);
+        const nums = color.match(/\d+/g);
         if (nums && nums.length >= 3) {
           r = +nums[0];
           g = +nums[1];
           b = +nums[2];
         }
       }
+
       const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       return lum < 0.5 ? 'light-content' : 'dark-content';
     } catch {
@@ -97,12 +97,14 @@ export default function App() {
   const handleMessage = (event: any) => {
     const raw = event.nativeEvent?.data;
     let parsed = null;
+
     try {
       parsed = JSON.parse(raw);
     } catch (e) {
       console.log('Invalid webview message', e, raw);
       return;
     }
+
     const { path = '/', theme } = parsed;
 
     if (theme) {
@@ -111,58 +113,67 @@ export default function App() {
       return;
     }
 
-    if (path === '/' || path === '') {
-      setBarColor('#222222');
-      setBarStyle('light-content');
-    } else if (path.startsWith('/news')) {
-      setBarColor('rgba(176, 200, 219, 0.85)');
-      setBarStyle('dark-content');
-    } else if (path.startsWith('/afisha')) {
-      setBarColor('rgba(229, 221, 238, 0.85)');
-      setBarStyle('dark-content');
-    } else if (path.startsWith('/cinema')) {
-      setBarColor('rgba(33, 33, 33, 0.85)');
-      setBarStyle('light-content');
-    } else {
-      setBarColor('#222222');
-      setBarStyle('light-content');
+    switch (true) {
+      case path === '/' || path === '':
+        setBarColor('#222222');
+        setBarStyle('light-content');
+        break;
+
+      case path.startsWith('/news'):
+        setBarColor('rgba(176, 200, 219, 0.85)');
+        setBarStyle('dark-content');
+        break;
+
+      case path.startsWith('/afisha'):
+        setBarColor('rgba(229, 221, 238, 0.85)');
+        setBarStyle('dark-content');
+        break;
+
+      case path.startsWith('/cinema'):
+        setBarColor('rgba(33, 33, 33, 0.85)');
+        setBarStyle('light-content');
+        break;
+
+      default:
+        setBarColor('#222222');
+        setBarStyle('light-content');
+        break;
     }
   };
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: barColor }]}
-        edges={['top']}
-      >
-        <StatusBar
-          barStyle={barStyle}
-          backgroundColor={barColor}
-          animated={true}
-          translucent={false}
-        />
-        <WebView
-          ref={webRef}
-          source={{ uri: 'https://sitim.info' }}
-          style={styles.webview}
-          injectedJavaScript={injectedJS}
-          onMessage={handleMessage}
-          javaScriptEnabled
-          domStorageEnabled
-          originWhitelist={['*']}
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-        />
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <SafeAreaView
+      style={[
+        styles.container,
+        {
+          backgroundColor: barColor,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+      edges={['top']}
+    >
+      <StatusBar barStyle={barStyle} backgroundColor={barColor} animated />
+
+      <WebView
+        ref={webRef}
+        source={{ uri: 'https://sitim.info' }}
+        style={styles.webview}
+        injectedJavaScript={injectedJS}
+        onMessage={handleMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        originWhitelist={['*']}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        // TODO: sitim-app-iphone и sitim-app-android в зависимости от OS
+        userAgent='sitim-app-android'
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  webview: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  webview: { flex: 1 },
 });
